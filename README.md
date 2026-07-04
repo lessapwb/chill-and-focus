@@ -11,7 +11,7 @@ O projeto é local-first: não usa backend, não envia telemetria e salva config
 - Bloqueia páginas rastreadas assim que o limite diário é atingido.
 - Mostra no badge da extensão quanto tempo ainda resta no dia.
 - Exibe no popup o site ativo, o tempo restante e o uso do dia por domínio.
-- Inclui uma página de opções com edição da lista de domínios, idioma, limite diário, repetição de notificações e gráfico dos últimos 14 dias.
+- Inclui uma página de opções com edição da lista de domínios, idioma, limite diário, repetição de notificações e gráfico em série do tempo total dos últimos 14 dias.
 - Suporta inglês e português.
 - Mantém os dados de uso no próprio navegador.
 

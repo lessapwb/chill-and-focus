@@ -25,6 +25,7 @@ let defaultTrackedHosts = [];
 let currentSettings = null;
 let saveStatusTimer = null;
 const GRAPH_DAYS = 14;
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 document.addEventListener("DOMContentLoaded", () => {
   loadDashboard({ renderForm: true });
@@ -174,12 +175,10 @@ function renderDailyChart(dailyByDate, todayByHost) {
   const rows = days.map((day) => {
     const byHost = history[day] || {};
     const totalSeconds = getTotalSeconds(byHost);
-    const topEntry = getTopHostEntry(byHost);
 
     return {
       day,
-      totalSeconds,
-      topHost: topEntry ? topEntry[0] : ""
+      totalSeconds
     };
   });
   const maxSeconds = Math.max(...rows.map((row) => row.totalSeconds), 60);
@@ -187,38 +186,165 @@ function renderDailyChart(dailyByDate, todayByHost) {
 
   graphRange.textContent = t("lastDays", { days: GRAPH_DAYS });
   dailyChart.replaceChildren();
+  dailyChart.setAttribute("aria-label", t("dailyTotalSeries", { days: GRAPH_DAYS }));
   chartEmpty.hidden = hasData;
 
-  for (const row of rows) {
-    const item = document.createElement("div");
-    const day = document.createElement("span");
-    const track = document.createElement("div");
-    const fill = document.createElement("span");
-    const site = document.createElement("span");
-    const time = document.createElement("span");
-    const width = row.totalSeconds > 0 ? Math.max(3, (row.totalSeconds / maxSeconds) * 100) : 0;
+  if (!hasData) {
+    return;
+  }
 
-    item.className = "chart-row";
-    item.setAttribute("role", "listitem");
+  dailyChart.append(createTimeSeriesChart(rows, maxSeconds));
+  dailyChart.append(createDailyTotalsList(rows));
+}
+
+function createTimeSeriesChart(rows, maxSeconds) {
+  const width = 840;
+  const height = 300;
+  const padding = { top: 24, right: 20, bottom: 46, left: 62 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const baselineY = padding.top + chartHeight;
+  const points = rows.map((row, index) => {
+    const x = padding.left + (chartWidth * index) / Math.max(1, rows.length - 1);
+    const y = baselineY - (row.totalSeconds / maxSeconds) * chartHeight;
+
+    return { ...row, x, y };
+  });
+  const svg = createSvgElement("svg", {
+    class: "time-series-chart",
+    viewBox: `0 0 ${width} ${height}`,
+    focusable: "false",
+    "aria-hidden": "true"
+  });
+
+  appendGrid(svg, padding, chartWidth, chartHeight, maxSeconds);
+
+  svg.append(
+    createSvgElement("path", {
+      class: "chart-area",
+      d: createAreaPath(points, baselineY)
+    }),
+    createSvgElement("path", {
+      class: "chart-line",
+      d: createLinePath(points)
+    })
+  );
+
+  for (const point of points) {
+    const group = createSvgElement("g", { class: point.totalSeconds > 0 ? "chart-point" : "chart-point zero" });
+    const title = createSvgElement("title");
+    const circle = createSvgElement("circle", {
+      cx: point.x.toFixed(2),
+      cy: point.y.toFixed(2),
+      r: point.totalSeconds > 0 ? "5" : "3"
+    });
+
+    title.textContent = `${formatLongDate(point.day)}: ${formatDuration(point.totalSeconds)}`;
+    group.append(title, circle);
+
+    if (point.totalSeconds > 0) {
+      const value = createSvgElement("text", {
+        class: "chart-point-label",
+        x: point.x.toFixed(2),
+        y: Math.max(14, point.y - 10).toFixed(2),
+        "text-anchor": "middle"
+      });
+
+      value.textContent = formatCompactDuration(point.totalSeconds);
+      group.append(value);
+    }
+
+    svg.append(group);
+  }
+
+  return svg;
+}
+
+function appendGrid(svg, padding, chartWidth, chartHeight, maxSeconds) {
+  const baselineY = padding.top + chartHeight;
+  const ticks = [maxSeconds, Math.round(maxSeconds / 2), 0];
+
+  for (const tick of ticks) {
+    const y = baselineY - (tick / maxSeconds) * chartHeight;
+    const line = createSvgElement("line", {
+      class: tick === 0 ? "chart-axis" : "chart-grid",
+      x1: padding.left,
+      x2: padding.left + chartWidth,
+      y1: y.toFixed(2),
+      y2: y.toFixed(2)
+    });
+    const label = createSvgElement("text", {
+      class: "chart-tick-label",
+      x: padding.left - 12,
+      y: (y + 4).toFixed(2),
+      "text-anchor": "end"
+    });
+
+    label.textContent = formatCompactDuration(tick);
+    svg.append(line, label);
+  }
+
+  svg.append(createSvgElement("line", {
+    class: "chart-axis",
+    x1: padding.left,
+    x2: padding.left,
+    y1: padding.top,
+    y2: baselineY
+  }));
+}
+
+function createDailyTotalsList(rows) {
+  const list = document.createElement("ol");
+  const todayKey = localDateKey();
+
+  list.className = "chart-day-list";
+
+  for (const row of rows) {
+    const item = document.createElement("li");
+    const day = document.createElement("span");
+    const total = document.createElement("strong");
+
+    item.className = row.day === todayKey ? "chart-day-item today" : "chart-day-item";
     item.title = `${formatLongDate(row.day)}: ${formatDuration(row.totalSeconds)}`;
 
-    day.className = "chart-day";
+    day.className = "chart-day-label";
     day.textContent = formatShortDate(row.day);
 
-    track.className = "chart-track";
-    fill.className = row.totalSeconds > 0 ? "chart-fill" : "chart-fill empty";
-    fill.style.width = `${width}%`;
+    total.className = "chart-day-total";
+    total.textContent = formatDuration(row.totalSeconds);
 
-    site.className = "chart-site";
-    site.textContent = row.topHost || t("noTrackedSites");
-
-    time.className = "chart-time";
-    time.textContent = formatDuration(row.totalSeconds);
-
-    track.append(fill, site);
-    item.append(day, track, time);
-    dailyChart.append(item);
+    item.append(day, total);
+    list.append(item);
   }
+
+  return list;
+}
+
+function createLinePath(points) {
+  return points
+    .map((point, index) => {
+      const command = index === 0 ? "M" : "L";
+      return `${command} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
+function createAreaPath(points, baselineY) {
+  const line = createLinePath(points);
+  const first = points[0];
+  const last = points[points.length - 1];
+
+  return `${line} L ${last.x.toFixed(2)} ${baselineY.toFixed(2)} L ${first.x.toFixed(2)} ${baselineY.toFixed(2)} Z`;
+}
+
+function createSvgElement(name, attributes = {}) {
+  const element = document.createElementNS(SVG_NS, name);
+
+  for (const [key, value] of Object.entries(attributes)) {
+    element.setAttribute(key, value);
+  }
+
+  return element;
 }
 
 function setStatus(message, isError = false) {
@@ -270,12 +396,6 @@ function localDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function getTopHostEntry(byHost) {
-  return Object.entries(byHost)
-    .filter(([, seconds]) => seconds > 0)
-    .sort((a, b) => b[1] - a[1])[0];
-}
-
 function getTotalSeconds(todayByHost) {
   return Object.values(todayByHost).reduce((total, seconds) => {
     return total + Math.max(0, Number(seconds) || 0);
@@ -317,6 +437,20 @@ function formatDuration(seconds) {
     return `${minutes}m ${remainingSeconds}s`;
   }
   return `${remainingSeconds}s`;
+}
+
+function formatCompactDuration(seconds) {
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m`;
+  }
+  return `${totalSeconds}s`;
 }
 
 function sendMessage(message) {

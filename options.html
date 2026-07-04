@@ -66,12 +66,12 @@
         <header class="section-title">
           <div class="section-heading">
             <span class="icon" data-lucide="bar-chart-3"></span>
-            <h2 id="dailyGraphTitle" data-i18n="dailyBlockedSiteTime">Daily blocked-site time</h2>
+            <h2 id="dailyGraphTitle" data-i18n="dailyBlockedSiteTime">Daily total time</h2>
           </div>
           <span id="graphRange" class="range-pill">Last 14 days</span>
         </header>
 
-        <div id="dailyChart" class="daily-chart" role="list"></div>
+        <div id="dailyChart" class="daily-chart" role="group" aria-label="Daily total time series"></div>
         <p id="chartEmpty" class="empty-state" data-i18n="noTrackedHistory" hidden>No tracked history yet.</p>
       </section>
 
