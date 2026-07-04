@@ -1,0 +1,30 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+
+# Extension packages and generated output
+*.crx
+*.zip
+dist/
+build/
+web-ext-artifacts/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Dependencies and tool caches
+node_modules/
+.cache/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

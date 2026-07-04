@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chill &amp; Focus Settings</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main class="settings">
+      <header class="app-header">
+        <div class="brand-lockup">
+          <span class="brand-icon icon" data-lucide="shield-check"></span>
+          <div>
+            <h1>Chill &amp; Focus</h1>
+            <p id="todayDate" data-i18n="today">Today</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <span class="status-pill">
+            <span class="icon" data-lucide="power"></span>
+            <span id="statusText" data-i18n="loading">Loading</span>
+          </span>
+          <span id="saveStatus" role="status" aria-live="polite"></span>
+        </div>
+      </header>
+
+      <section class="dashboard" aria-label="Today overview">
+        <article class="metric-card emphasis">
+          <span class="metric-icon icon" data-lucide="clock"></span>
+          <div>
+            <span class="metric-label" data-i18n="timeLeftToday">Time left today</span>
+            <strong id="todayTotal">0s</strong>
+          </div>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-icon icon" data-lucide="globe-2"></span>
+          <div>
+            <span class="metric-label" data-i18n="activeDomain">Active domain</span>
+            <strong id="activeTime">0s</strong>
+            <span id="activeHost" class="metric-note" data-i18n="notTrackingPage">Not tracking this page</span>
+          </div>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-icon icon" data-lucide="timer"></span>
+          <div>
+            <span class="metric-label" data-i18n="dailyTotalLimit">Daily total limit</span>
+            <strong id="limitSummary">5m</strong>
+            <span id="blockSummary" class="metric-note" data-i18n="totalAcrossTrackedSites">Total across tracked sites</span>
+          </div>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-icon icon" data-lucide="list-checks"></span>
+          <div>
+            <span class="metric-label" data-i18n="trackedDomains">Tracked domains</span>
+            <strong id="domainCount">0</strong>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel graph-panel" aria-labelledby="dailyGraphTitle">
+        <header class="section-title">
+          <div class="section-heading">
+            <span class="icon" data-lucide="bar-chart-3"></span>
+            <h2 id="dailyGraphTitle" data-i18n="dailyBlockedSiteTime">Daily blocked-site time</h2>
+          </div>
+          <span id="graphRange" class="range-pill">Last 14 days</span>
+        </header>
+
+        <div id="dailyChart" class="daily-chart" role="list"></div>
+        <p id="chartEmpty" class="empty-state" data-i18n="noTrackedHistory" hidden>No tracked history yet.</p>
+      </section>
+
+      <form id="settingsForm" class="settings-form">
+        <section class="panel">
+          <header class="section-title">
+            <div class="section-heading">
+              <span class="icon" data-lucide="settings"></span>
+              <h2 data-i18n="focusRules">Focus rules</h2>
+            </div>
+            <label class="toggle-row">
+              <input id="enabled" type="checkbox">
+              <span class="toggle-visual" aria-hidden="true"></span>
+              <span data-i18n="enabled">Enabled</span>
+            </label>
+          </header>
+
+          <div class="number-grid">
+            <label class="field">
+              <span class="field-label">
+                <span class="icon" data-lucide="globe-2"></span>
+                <span data-i18n="language">Language / Idioma</span>
+              </span>
+              <select id="language">
+                <option value="en">English</option>
+                <option value="pt">Português</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span class="field-label">
+                <span class="icon" data-lucide="timer"></span>
+                <span data-i18n="dailyTotalLimit">Daily total limit</span>
+              </span>
+              <span class="input-shell">
+                <input id="notifyAfterMinutes" type="number" min="1" max="240" step="1">
+                <span>min</span>
+              </span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">
+                <span class="icon" data-lucide="bell"></span>
+                <span data-i18n="notificationRepeat">Notification repeat</span>
+              </span>
+              <span class="input-shell">
+                <input id="repeatEveryMinutes" type="number" min="1" max="240" step="1">
+                <span>min</span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel domains-panel">
+          <header class="section-title">
+            <div class="section-heading">
+              <span class="icon" data-lucide="globe-2"></span>
+              <h2 data-i18n="trackedSites">Tracked sites</h2>
+            </div>
+
+            <div class="button-group">
+              <button id="restoreDefaults" class="secondary" type="button">
+                <span class="icon" data-lucide="list-checks"></span>
+                <span data-i18n="defaults">Defaults</span>
+              </button>
+            </div>
+          </header>
+
+          <div class="domains-layout">
+            <label class="hosts-field" for="trackedHosts">
+              <span data-i18n="domains">Domains</span>
+              <textarea id="trackedHosts" spellcheck="false"></textarea>
+            </label>
+
+            <aside class="today-usage" aria-labelledby="todayUsageTitle">
+              <div class="side-heading">
+                <span class="icon" data-lucide="clock"></span>
+                <h3 id="todayUsageTitle" data-i18n="todayBySite">Today by site</h3>
+              </div>
+              <ol id="statsList" class="usage-list"></ol>
+              <p id="emptyState" class="empty-state" data-i18n="noTrackedTimeToday" hidden>No tracked time today.</p>
+            </aside>
+          </div>
+        </section>
+
+        <footer class="actions">
+          <button id="saveSettings" class="primary" type="submit">
+            <span class="icon" data-lucide="save"></span>
+            <span data-i18n="saveChanges">Save changes</span>
+          </button>
+        </footer>
+      </form>
+    </main>
+
+    <script src="i18n.js"></script>
+    <script src="lucide-icons.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

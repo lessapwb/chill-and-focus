@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chill &amp; Focus</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup">
+      <header class="header">
+        <div class="brand">
+          <span class="brand-icon icon" data-lucide="shield-check"></span>
+          <div>
+            <h1>Chill &amp; Focus</h1>
+          <p id="activeSite" data-i18n="loading">Loading...</p>
+          </div>
+        </div>
+
+        <label class="switch" title="Enable tracking" data-i18n-title="enabled">
+          <input id="enabledToggle" type="checkbox">
+          <span></span>
+        </label>
+      </header>
+
+      <section class="metric total-metric">
+        <span class="metric-heading">
+          <span class="icon" data-lucide="clock"></span>
+          <span data-i18n="timeLeftToday">Time left today</span>
+        </span>
+        <strong id="todayTotal">0s</strong>
+      </section>
+
+      <section class="metric compact-metric">
+        <span class="metric-heading">
+          <span class="icon" data-lucide="globe-2"></span>
+          <span data-i18n="currentSite">Current site</span>
+        </span>
+        <strong id="activeTime">0s</strong>
+        <span id="nextReminder" class="metric-note"></span>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <span>
+            <span class="icon" data-lucide="list-checks"></span>
+            <span data-i18n="todayBySite">Today by site</span>
+          </span>
+        </div>
+        <ol id="statsList" class="stats-list"></ol>
+        <p id="emptyState" class="empty-state" data-i18n="noTrackedTimeToday" hidden>No tracked time today.</p>
+      </section>
+
+      <footer class="footer">
+        <button id="openOptions" class="primary" type="button">
+          <span class="icon" data-lucide="pencil"></span>
+          <span data-i18n="editSites">Edit sites</span>
+        </button>
+      </footer>
+    </main>
+
+    <script src="i18n.js"></script>
+    <script src="lucide-icons.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
