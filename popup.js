@@ -8,8 +8,30 @@ const emptyState = document.getElementById("emptyState");
 const openOptions = document.getElementById("openOptions");
 
 let dashboard = null;
+let dashboardReceivedAt = 0;
+let liveTimer = null;
+let resyncTimer = null;
+const LIVE_TICK_MS = 1000;
+const RESYNC_MS = 15000;
 
-document.addEventListener("DOMContentLoaded", refresh);
+document.addEventListener("DOMContentLoaded", () => {
+  refresh();
+  liveTimer = window.setInterval(renderLiveDashboard, LIVE_TICK_MS);
+  resyncTimer = window.setInterval(refresh, RESYNC_MS);
+});
+
+window.addEventListener("beforeunload", () => {
+  window.clearInterval(liveTimer);
+  window.clearInterval(resyncTimer);
+});
+
+window.addEventListener("focus", refresh);
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    refresh();
+  }
+});
 
 enabledToggle.addEventListener("change", async () => {
   if (!dashboard) {
@@ -31,6 +53,8 @@ openOptions.addEventListener("click", () => {
 
 async function refresh() {
   dashboard = await sendMessage({ type: "GET_DASHBOARD" });
+  dashboardReceivedAt = Date.now();
+
   if (!dashboard || !dashboard.ok) {
     activeSite.textContent = "Unavailable";
     return;
@@ -38,9 +62,19 @@ async function refresh() {
 
   applyTranslations(dashboard.settings.language);
   enabledToggle.checked = dashboard.settings.enabled;
-  todayTotal.textContent = formatDuration(getRemainingSeconds(dashboard));
-  renderActiveSite(dashboard);
+  renderLiveDashboard();
   renderStats(dashboard.stats.todayByHost || {});
+}
+
+function renderLiveDashboard() {
+  if (!dashboard || !dashboard.ok) {
+    return;
+  }
+
+  const liveDashboard = getLiveDashboard(dashboard);
+
+  todayTotal.textContent = formatDuration(getRemainingSeconds(liveDashboard));
+  renderActiveSite(liveDashboard);
 }
 
 function renderActiveSite(data) {
@@ -106,6 +140,30 @@ function getRemainingSeconds(data) {
 
   const limitSeconds = Math.max(60, (data.settings?.notifyAfterMinutes || 5) * 60);
   return Math.max(0, limitSeconds - (data.todayTotalSeconds || 0));
+}
+
+function getLiveDashboard(data) {
+  const liveElapsedSeconds = getLiveElapsedSeconds(data);
+  const todayTotalSeconds = (data.todayTotalSeconds || 0) + liveElapsedSeconds;
+  const activeSeconds = (data.activeSeconds || 0) + liveElapsedSeconds;
+  const todayRemainingSeconds = Number.isFinite(data.todayRemainingSeconds)
+    ? Math.max(0, data.todayRemainingSeconds - liveElapsedSeconds)
+    : getRemainingSeconds({ ...data, todayTotalSeconds });
+
+  return {
+    ...data,
+    activeSeconds,
+    todayTotalSeconds,
+    todayRemainingSeconds
+  };
+}
+
+function getLiveElapsedSeconds(data) {
+  if (!data?.settings?.enabled || !data.activeHost || !dashboardReceivedAt) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - dashboardReceivedAt) / 1000));
 }
 
 function formatDuration(seconds) {

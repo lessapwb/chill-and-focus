@@ -1,9 +1,5 @@
 (() => {
-const BLOCKER_SCRIPT_VERSION = "2026-07-04-bilingual";
-
-if (globalThis.__chillfoBlockerVersion === BLOCKER_SCRIPT_VERSION) {
-  return;
-}
+const BLOCKER_SCRIPT_VERSION = "2026-07-04-context-safe";
 
 if (typeof globalThis.__chillfoBlockerCleanup === "function") {
   globalThis.__chillfoBlockerCleanup();
@@ -12,7 +8,7 @@ if (typeof globalThis.__chillfoBlockerCleanup === "function") {
 globalThis.__chillfoBlockerVersion = BLOCKER_SCRIPT_VERSION;
 
 const BLOCKER_HOST_ID = "chillfo-blocker-host";
-const STATUS_POLL_MS = 2000;
+const STATUS_POLL_MS = 1000;
 const BLOCKER_TEXT = {
   en: {
     blockedDetail: "Daily limit: {limit} minutes total across tracked sites. Current total: {total} minutes. {host}: {site} minutes today.",
@@ -32,19 +28,32 @@ const BLOCKER_TEXT = {
   }
 };
 let statusTimer = null;
+let contextActive = true;
 
-chrome.runtime.onMessage.addListener(handleRuntimeMessage);
-window.addEventListener("focus", requestPageStatus);
+if (!addRuntimeMessageListener()) {
+  deactivateBlocker();
+  return;
+}
+
+window.addEventListener("focus", handleFocus);
+window.addEventListener("unhandledrejection", handleUnhandledRejection);
+window.addEventListener("error", handleWindowError);
 document.addEventListener("visibilitychange", handleVisibilityChange);
 
-globalThis.__chillfoBlockerCleanup = () => {
-  window.clearTimeout(statusTimer);
-  chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
-  window.removeEventListener("focus", requestPageStatus);
-  document.removeEventListener("visibilitychange", handleVisibilityChange);
-};
+globalThis.__chillfoBlockerCleanup = deactivateBlocker;
 
-requestPageStatus();
+function deactivateBlocker() {
+  contextActive = false;
+  window.clearTimeout(statusTimer);
+  statusTimer = null;
+  removeRuntimeMessageListener();
+  window.removeEventListener("focus", handleFocus);
+  window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+  window.removeEventListener("error", handleWindowError);
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
+}
+
+checkPageStatus();
 
 function handleRuntimeMessage(message) {
   if (!message || typeof message.type !== "string") {
@@ -62,11 +71,23 @@ function handleRuntimeMessage(message) {
 
 function handleVisibilityChange() {
   if (document.visibilityState === "visible") {
-    requestPageStatus();
+    checkPageStatus();
   }
 }
 
+function handleFocus() {
+  checkPageStatus();
+}
+
+function checkPageStatus() {
+  void requestPageStatus().catch(handleAsyncError);
+}
+
 async function requestPageStatus() {
+  if (!contextActive) {
+    return;
+  }
+
   window.clearTimeout(statusTimer);
 
   const response = await sendMessage({
@@ -88,7 +109,7 @@ async function requestPageStatus() {
 }
 
 function scheduleNextStatusCheck(status) {
-  if (!status.enabled || !status.tracked || document.visibilityState !== "visible") {
+  if (!contextActive || !status.enabled || !status.tracked || document.visibilityState !== "visible") {
     return;
   }
 
@@ -97,7 +118,7 @@ function scheduleNextStatusCheck(status) {
   const remainingMs = Math.max(1000, (limitSeconds - trackedSeconds) * 1000);
   const nextCheckMs = Math.min(remainingMs, STATUS_POLL_MS);
 
-  statusTimer = window.setTimeout(requestPageStatus, nextCheckMs);
+  statusTimer = window.setTimeout(checkPageStatus, nextCheckMs);
 }
 
 function showBlocker(status) {
@@ -283,10 +304,10 @@ function showBlocker(status) {
   `;
 
   shadow.querySelector(".settings").addEventListener("click", () => {
-    chrome.runtime.sendMessage({ type: "OPEN_OPTIONS" });
+    void sendMessage({ type: "OPEN_OPTIONS" });
   });
   shadow.querySelector(".leave").addEventListener("click", () => {
-    chrome.runtime.sendMessage({ type: "LEAVE_BLOCKED_PAGE" });
+    void sendMessage({ type: "LEAVE_BLOCKED_PAGE" });
   });
 
   updateBlocker(shadow, status);
@@ -342,13 +363,85 @@ function removeBlocker() {
 
 function sendMessage(message) {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage(message, (response) => {
-      if (chrome.runtime.lastError) {
-        resolve({ ok: false });
-        return;
-      }
-      resolve(response || { ok: false });
-    });
+    if (!contextActive || !isRuntimeAvailable()) {
+      resolve({ ok: false, contextInvalidated: true });
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage(message, (response) => {
+        const runtimeError = chrome.runtime.lastError;
+        if (runtimeError) {
+          handleRuntimeError(runtimeError);
+          resolve({ ok: false, error: runtimeError.message || String(runtimeError) });
+          return;
+        }
+
+        resolve(response || { ok: false });
+      });
+    } catch (error) {
+      handleRuntimeError(error);
+      resolve({ ok: false, error: error.message || String(error) });
+    }
   });
+}
+
+function addRuntimeMessageListener() {
+  if (!isRuntimeAvailable()) {
+    return false;
+  }
+
+  try {
+    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+    return true;
+  } catch (error) {
+    handleRuntimeError(error);
+    return false;
+  }
+}
+
+function removeRuntimeMessageListener() {
+  if (!isRuntimeAvailable()) {
+    return;
+  }
+
+  try {
+    chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
+  } catch {
+    // The page may still hold an old content script after the extension reloads.
+  }
+}
+
+function isRuntimeAvailable() {
+  return Boolean(globalThis.chrome?.runtime?.sendMessage && globalThis.chrome?.runtime?.onMessage);
+}
+
+function handleRuntimeError(error) {
+  if (isExtensionContextInvalidated(error)) {
+    deactivateBlocker();
+  }
+}
+
+function handleAsyncError(error) {
+  handleRuntimeError(error);
+}
+
+function handleUnhandledRejection(event) {
+  if (isExtensionContextInvalidated(event.reason)) {
+    event.preventDefault();
+    deactivateBlocker();
+  }
+}
+
+function handleWindowError(event) {
+  if (isExtensionContextInvalidated(event.error || event.message)) {
+    event.preventDefault();
+    deactivateBlocker();
+  }
+}
+
+function isExtensionContextInvalidated(error) {
+  const message = String(error?.message || error || "");
+  return message.includes("Extension context invalidated");
 }
 })();

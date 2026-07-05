@@ -23,12 +23,37 @@ const graphRange = document.getElementById("graphRange");
 
 let defaultTrackedHosts = [];
 let currentSettings = null;
+let dashboard = null;
+let dashboardReceivedAt = 0;
 let saveStatusTimer = null;
+let liveTimer = null;
+let resyncTimer = null;
 const GRAPH_DAYS = 14;
+const LIVE_TICK_MS = 1000;
+const RESYNC_MS = 15000;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 document.addEventListener("DOMContentLoaded", () => {
   loadDashboard({ renderForm: true });
+  liveTimer = window.setInterval(renderLiveOverview, LIVE_TICK_MS);
+  resyncTimer = window.setInterval(() => {
+    loadDashboard({ renderForm: false });
+  }, RESYNC_MS);
+});
+
+window.addEventListener("beforeunload", () => {
+  window.clearInterval(liveTimer);
+  window.clearInterval(resyncTimer);
+});
+
+window.addEventListener("focus", () => {
+  loadDashboard({ renderForm: false });
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    loadDashboard({ renderForm: false });
+  }
 });
 
 settingsForm.addEventListener("submit", async (event) => {
@@ -80,6 +105,8 @@ async function loadDashboard({ renderForm }) {
     return;
   }
 
+  dashboard = response;
+  dashboardReceivedAt = Date.now();
   defaultTrackedHosts = response.defaultTrackedHosts || [];
   currentSettings = response.settings;
   applyTranslations(response.settings.language);
@@ -88,7 +115,7 @@ async function loadDashboard({ renderForm }) {
     renderSettings(response.settings);
   }
 
-  renderOverview(response);
+  renderLiveOverview();
   renderStats(response.stats.todayByHost || {});
   renderDailyChart(response.stats.dailyByDate || {}, response.stats.todayByHost || {});
 }
@@ -129,6 +156,14 @@ function renderOverview(data) {
   domainCount.textContent = String(hosts.length);
 }
 
+function renderLiveOverview() {
+  if (!dashboard || !dashboard.ok) {
+    return;
+  }
+
+  renderOverview(getLiveDashboard(dashboard));
+}
+
 function getRemainingSeconds(data, totalSeconds) {
   if (Number.isFinite(data.todayRemainingSeconds)) {
     return data.todayRemainingSeconds;
@@ -136,6 +171,30 @@ function getRemainingSeconds(data, totalSeconds) {
 
   const limitSeconds = Math.max(60, (data.settings?.notifyAfterMinutes || 5) * 60);
   return Math.max(0, limitSeconds - totalSeconds);
+}
+
+function getLiveDashboard(data) {
+  const liveElapsedSeconds = getLiveElapsedSeconds(data);
+  const todayTotalSeconds = (data.todayTotalSeconds || 0) + liveElapsedSeconds;
+  const activeSeconds = (data.activeSeconds || 0) + liveElapsedSeconds;
+  const todayRemainingSeconds = Number.isFinite(data.todayRemainingSeconds)
+    ? Math.max(0, data.todayRemainingSeconds - liveElapsedSeconds)
+    : getRemainingSeconds({ ...data, todayTotalSeconds }, todayTotalSeconds);
+
+  return {
+    ...data,
+    activeSeconds,
+    todayTotalSeconds,
+    todayRemainingSeconds
+  };
+}
+
+function getLiveElapsedSeconds(data) {
+  if (!data?.settings?.enabled || !data.activeHost || !dashboardReceivedAt) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - dashboardReceivedAt) / 1000));
 }
 
 function renderStats(todayByHost) {
