@@ -61,7 +61,7 @@ Navegadores Chromium são o alvo principal porque a extensão usa service worker
 ### Como usar
 
 1. Abra o popup da extensão para ver o tempo restante do dia.
-2. Clique em **Edit sites** para abrir as configurações.
+2. Clique em **Settings** para abrir as configurações.
 3. Ajuste o limite diário total em minutos.
 4. Edite a lista de domínios rastreados, um domínio por linha.
 5. Salve as alterações.
@@ -152,7 +152,7 @@ Chromium browsers are the primary target because the extension uses Manifest V3 
 ### Usage
 
 1. Open the extension popup to see today's remaining time.
-2. Click **Edit sites** to open settings.
+2. Click **Settings** to open settings.
 3. Adjust the daily total limit in minutes.
 4. Edit tracked domains, one domain per line.
 5. Save the changes.

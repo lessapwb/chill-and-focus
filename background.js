@@ -194,14 +194,6 @@ async function handleMessage(message, sender) {
     return { ok: true };
   }
 
-  if (message.type === "LEAVE_BLOCKED_PAGE") {
-    const tabId = sender?.tab?.id;
-    if (tabId) {
-      await updateTab(tabId, { url: "about:blank" });
-    }
-    return { ok: true };
-  }
-
   return { ok: false, error: "Unsupported message" };
 }
 
@@ -795,15 +787,6 @@ function injectContentBlocker(tabId) {
         resolve(true);
       }
     );
-  });
-}
-
-function updateTab(tabId, updateProperties) {
-  return new Promise((resolve) => {
-    chrome.tabs.update(tabId, updateProperties, () => {
-      void chrome.runtime.lastError;
-      resolve();
-    });
   });
 }
 

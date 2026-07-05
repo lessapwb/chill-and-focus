@@ -14,15 +14,17 @@ const BLOCKER_TEXT = {
     blockedDetail: "Daily limit: {limit} minutes total across tracked sites. Current total: {total} minutes. {host}: {site} minutes today.",
     blockedEyebrow: "Time limit reached",
     blockedTitle: "Chill & Focus blocked this page",
+    closeInstruction: "Close this tab to keep your focus.",
     defaultMessage: "Time is up on {host}.",
-    leavePage: "Leave page"
+    motivation: "You already made the decision. Protect the next few minutes."
   },
   pt: {
     blockedDetail: "Limite diário: {limit} minutos no total em sites rastreados. Total atual: {total} minutos. {host}: {site} minutos hoje.",
     blockedEyebrow: "Limite de tempo atingido",
     blockedTitle: "Chill & Focus bloqueou esta página",
+    closeInstruction: "Feche esta aba para manter o foco.",
     defaultMessage: "O tempo acabou em {host}.",
-    leavePage: "Sair da página"
+    motivation: "Você já tomou a decisão. Proteja os próximos minutos."
   }
 };
 let statusTimer = null;
@@ -198,63 +200,28 @@ function showBlocker(status) {
         margin-top: 10px;
       }
 
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 10px;
+      .close-note {
         margin-top: 22px;
+        border-radius: 8px;
+        background: #ecfdf5;
+        padding: 14px;
+        color: #0f766e;
+        text-align: center;
       }
 
-      button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        min-height: 38px;
-        border: 1px solid rgba(17, 24, 39, 0.16);
-        border-radius: 6px;
-        padding: 0 14px;
-        background: white;
-        color: #111827;
-        font: inherit;
-        font-size: 14px;
-        font-weight: 700;
-        cursor: pointer;
+      .close-note strong {
+        display: block;
+        color: #0f766e;
+        font-size: 15px;
+        line-height: 1.4;
       }
 
-      .icon {
-        display: inline-flex;
-        width: 18px;
-        height: 18px;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 auto;
-      }
-
-      .icon svg {
-        width: 100%;
-        height: 100%;
-      }
-
-      button.primary {
-        border-color: #0f766e;
-        background: #0f766e;
-        color: white;
-      }
-
-      button:hover {
-        border-color: rgba(17, 24, 39, 0.32);
-      }
-
-      button.primary:hover {
-        border-color: #115e59;
-        background: #115e59;
-      }
-
-      button:focus-visible {
-        outline: 2px solid #f59e0b;
-        outline-offset: 2px;
+      .close-note span {
+        display: block;
+        margin-top: 4px;
+        color: #315d59;
+        font-size: 13px;
+        line-height: 1.45;
       }
 
       @media (max-width: 520px) {
@@ -265,10 +232,6 @@ function showBlocker(status) {
         h1 {
           font-size: 24px;
         }
-
-        .actions {
-          display: grid;
-        }
       }
     </style>
     <main class="blocker" role="dialog" aria-modal="true" aria-labelledby="chillfo-title">
@@ -277,29 +240,15 @@ function showBlocker(status) {
         <h1 id="chillfo-title">${translate(language, "blockedTitle")}</h1>
         <p class="message"></p>
         <p class="detail"></p>
-        <div class="actions">
-          <button class="primary leave" type="button">
-            <span class="icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="m4.9 4.9 14.2 14.2"/>
-              </svg>
-            </span>
-            ${translate(language, "leavePage")}
-          </button>
+        <div class="close-note">
+          <strong>${translate(language, "closeInstruction")}</strong>
+          <span>${translate(language, "motivation")}</span>
         </div>
       </section>
     </main>
   `;
 
-  shadow.querySelector(".leave").addEventListener("click", () => {
-    void sendMessage({ type: "LEAVE_BLOCKED_PAGE" });
-  });
-
   updateBlocker(shadow, status);
-  window.setTimeout(() => {
-    shadow.querySelector(".leave")?.focus();
-  }, 0);
 }
 
 function updateBlocker(shadow, status) {
