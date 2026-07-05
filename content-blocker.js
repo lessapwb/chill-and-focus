@@ -15,16 +15,14 @@ const BLOCKER_TEXT = {
     blockedEyebrow: "Time limit reached",
     blockedTitle: "Chill & Focus blocked this page",
     defaultMessage: "Time is up on {host}.",
-    leavePage: "Leave page",
-    settings: "Settings"
+    leavePage: "Leave page"
   },
   pt: {
     blockedDetail: "Limite diário: {limit} minutos no total em sites rastreados. Total atual: {total} minutos. {host}: {site} minutos hoje.",
     blockedEyebrow: "Limite de tempo atingido",
     blockedTitle: "Chill & Focus bloqueou esta página",
     defaultMessage: "O tempo acabou em {host}.",
-    leavePage: "Sair da página",
-    settings: "Configurações"
+    leavePage: "Sair da página"
   }
 };
 let statusTimer = null;
@@ -203,7 +201,7 @@ function showBlocker(status) {
       .actions {
         display: flex;
         flex-wrap: wrap;
-        justify-content: flex-end;
+        justify-content: center;
         gap: 10px;
         margin-top: 22px;
       }
@@ -280,15 +278,6 @@ function showBlocker(status) {
         <p class="message"></p>
         <p class="detail"></p>
         <div class="actions">
-          <button class="settings" type="button">
-            <span class="icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </span>
-            ${translate(language, "settings")}
-          </button>
           <button class="primary leave" type="button">
             <span class="icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -303,9 +292,6 @@ function showBlocker(status) {
     </main>
   `;
 
-  shadow.querySelector(".settings").addEventListener("click", () => {
-    void sendMessage({ type: "OPEN_OPTIONS" });
-  });
   shadow.querySelector(".leave").addEventListener("click", () => {
     void sendMessage({ type: "LEAVE_BLOCKED_PAGE" });
   });
